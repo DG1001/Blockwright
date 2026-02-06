@@ -2,6 +2,16 @@
 
 A browser-based 3D landscape generator with Minecraft-style block building. Built with Three.js — no build tools required.
 
+![Screenshot with house, towers and church](screen.png)
+
+## Background
+
+I created this to test the new Opus 4.6 with Claude Code. The first step was to create a landscape/terrain generator, then add the first-person view, then Minecraft-style building, and finally AI creation of buildings.
+Pretty amazing — this worked almost flawlessly with no errors in between. I also started a version with Codex and the new gpt-5.3-codex, also very nice, but I like the Claude version better. E.g. Codex also implemented a first-person view, but you cannot turn the camera (it always points to the middle).
+The subscription usage was on the other hand much better: Codex just used a few percent, while with Opus 4.6 I reached the 5-hour limit pretty fast. I used a part of the bonus $50 currently given by Anthropic to get to the next 5-hour window, but it still took me another 5-hour session to get where this project is now.
+And: if you try the AI building feature, be prepared to pay for it. The 'church' in the screenshot for example cost 10 cents in API usage.
+
+
 ## Features
 
 - **Procedural terrain** — Simplex noise with fBm octaves, altitude-based vertex coloring (sand, grass, rock, snow), island-shaped falloff
