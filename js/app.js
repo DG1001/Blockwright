@@ -370,7 +370,7 @@ async function generateStructure(prompt) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 4096,
+        max_tokens: 16384,
         system: AI_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -388,6 +388,14 @@ async function generateStructure(prompt) {
     if (!text) {
       showAiError('No response from AI');
       return null;
+    }
+
+    // If response was truncated due to max_tokens, salvage complete blocks
+    if (data.stop_reason === 'max_tokens') {
+      const lastBrace = text.lastIndexOf('}');
+      if (lastBrace !== -1) {
+        text = text.substring(0, lastBrace + 1).replace(/,\s*$/, '') + ']';
+      }
     }
 
     // Extract JSON array from response — handle code fences, surrounding text, etc.
