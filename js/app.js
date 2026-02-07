@@ -876,6 +876,10 @@ function toggleBlockify() {
     isBlockified = false;
     blockifyBtn.textContent = 'Blockify';
     blockifyBtn.classList.remove('active');
+
+    // Restore chickens if enabled
+    const chickensOff = currentLandscape.getObjectByName('chickens');
+    if (chickensOff) chickensOff.visible = chickensEnabled;
   } else {
     // Convert: hide smooth terrain, show voxel blocks
     const terrain = currentLandscape.children[0];
@@ -888,6 +892,10 @@ function toggleBlockify() {
     isBlockified = true;
     blockifyBtn.textContent = 'Smooth Terrain';
     blockifyBtn.classList.add('active');
+
+    // Hide chickens — they walk on the invisible smooth surface
+    const chickensOn = currentLandscape.getObjectByName('chickens');
+    if (chickensOn) chickensOn.visible = false;
   }
 }
 
@@ -967,7 +975,7 @@ document.getElementById('chickens-toggle').addEventListener('change', (e) => {
   chickensEnabled = e.target.checked;
   if (currentLandscape) {
     const chickens = currentLandscape.getObjectByName('chickens');
-    if (chickens) chickens.visible = chickensEnabled;
+    if (chickens) chickens.visible = chickensEnabled && !isBlockified;
   }
 });
 

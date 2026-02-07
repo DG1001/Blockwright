@@ -21,6 +21,7 @@ HINT: if you try the AI building feature, be prepared to pay for it. The 'church
 - **Time of day** — Slider controls sun position, sky colors, lighting, fog, and bloom in real time
 - **First-person mode** — Walk around the landscape with WASD + mouse look
 - **Block building** — Place and remove Minecraft-style blocks in first person (6 block types)
+- **Blockify terrain** — Toggle converts the smooth terrain into Minecraft-style voxel blocks using InstancedMesh (sand near water, grass in midlands, stone on peaks). Chickens are hidden automatically in blocky mode
 - **AI Structure Builder** — Describe a structure (e.g. "small house", "bridge") and Claude generates a block layout via the Anthropic API. Preview it as a ghost blueprint, rotate with Q/E, then click to place
 - **Chickens** — Cartoon chickens roam the grass with walking, pecking, and idle animations (toggleable via sidebar checkbox)
 - **Seed system** — Enter a numeric or text seed to revisit the same landscape
