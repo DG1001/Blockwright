@@ -17,11 +17,12 @@ HINT: if you try the AI building feature, be prepared to pay for it. The 'church
 ## Features
 
 - **Procedural terrain** — Simplex noise with fBm octaves, altitude-based vertex coloring (sand, grass, rock, snow), island-shaped falloff
-- **Environment** — Water with animated waves, drifting clouds, sky dome, rocks, wildflowers, trees, fog
+- **Environment** — Water with animated waves, drifting clouds, sky dome, rocks, wildflowers, trees, cartoon chickens, fog
 - **Time of day** — Slider controls sun position, sky colors, lighting, fog, and bloom in real time
 - **First-person mode** — Walk around the landscape with WASD + mouse look
 - **Block building** — Place and remove Minecraft-style blocks in first person (6 block types)
 - **AI Structure Builder** — Describe a structure (e.g. "small house", "bridge") and Claude generates a block layout via the Anthropic API. Preview it as a ghost blueprint, rotate with Q/E, then click to place
+- **Chickens** — Cartoon chickens roam the grass with walking, pecking, and idle animations (toggleable via sidebar checkbox)
 - **Seed system** — Enter a numeric or text seed to revisit the same landscape
 - **Screenshot** — Download the current view as PNG
 - **Post-processing** — Bloom with dynamic intensity based on time of day
@@ -76,7 +77,7 @@ Then open http://localhost:8000 in a browser.
 ```
 index.html      — HTML shell, import map, UI overlay, CSS
 js/app.js       — Scene, camera, controls, lighting, block system, render loop
-js/terrain.js   — Procedural generation: terrain, water, trees, rocks, flowers, sky, clouds
+js/terrain.js   — Procedural generation: terrain, water, trees, rocks, flowers, chickens, sky, clouds
 ```
 
 ## AI Structure Builder
