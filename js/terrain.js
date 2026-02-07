@@ -688,6 +688,94 @@ export function animateWater(waterMesh, time) {
   geo.computeVertexNormals();
 }
 
+// --- Blockify: convert smooth terrain to voxel blocks ---
+export function blockifyTerrain(landscapeGroup) {
+  const { noise2D, size } = landscapeGroup.userData;
+  const halfSize = size / 2;
+  const WATER_Y = 2.0;
+  const DEPTH = 3; // blocks deep per column
+
+  // Block type definitions matching BLOCK_TYPES in app.js
+  const types = [
+    { name: 'Dirt',  color: 0x8B6914 }, // 0
+    { name: 'Grass', color: 0x4a7c3f }, // 1
+    { name: 'Stone', color: 0x888888 }, // 2
+    { name: 'Wood',  color: 0x9e7c4a }, // 3
+    { name: 'Sand',  color: 0xd4c48a }, // 4
+  ];
+
+  // Collect positions per type
+  const positions = new Map(); // typeIndex -> [x,y,z, x,y,z, ...]
+  for (let i = 0; i < types.length; i++) positions.set(i, []);
+
+  for (let ix = -halfSize; ix < halfSize; ix++) {
+    for (let iz = -halfSize; iz < halfSize; iz++) {
+      const h = sampleHeight(noise2D, ix, iz, halfSize);
+      const elevation = h * 30;
+
+      // Skip columns below water
+      if (elevation < WATER_Y) continue;
+
+      // Determine surface and fill types
+      let surfaceType, fillType;
+      if (h < 0.15) {
+        surfaceType = 4; // Sand
+        fillType = 4;
+      } else if (h < 0.45) {
+        surfaceType = 1; // Grass
+        fillType = 0;    // Dirt
+      } else {
+        surfaceType = 2; // Stone
+        fillType = 2;
+      }
+
+      const surfaceY = Math.floor(elevation) + 0.5;
+
+      // Surface block
+      positions.get(surfaceType).push(ix + 0.5, surfaceY, iz + 0.5);
+
+      // Fill blocks below surface
+      for (let d = 1; d < DEPTH; d++) {
+        const fy = surfaceY - d;
+        if (fy < 0) break;
+        positions.get(fillType).push(ix + 0.5, fy, iz + 0.5);
+      }
+    }
+  }
+
+  const group = new THREE.Group();
+  group.name = 'voxelTerrain';
+
+  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+
+  for (const [typeIdx, posArr] of positions) {
+    const count = posArr.length / 3;
+    if (count === 0) continue;
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: types[typeIdx].color,
+      roughness: 0.9,
+      metalness: 0.05,
+    });
+
+    const mesh = new THREE.InstancedMesh(boxGeo, mat, count);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < count; i++) {
+      dummy.position.set(posArr[i * 3], posArr[i * 3 + 1], posArr[i * 3 + 2]);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    }
+
+    mesh.instanceMatrix.needsUpdate = true;
+    group.add(mesh);
+  }
+
+  return group;
+}
+
 // --- Main export ---
 export function generateLandscape(seed) {
   const rng = mulberry32(seed);
@@ -698,6 +786,8 @@ export function generateLandscape(seed) {
 
   const group = new THREE.Group();
   group.name = 'landscape';
+  group.userData.noise2D = noise2D;
+  group.userData.size = size;
 
   const terrain = createTerrain(noise2D, size, segments);
   group.add(terrain);

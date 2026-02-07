@@ -4,7 +4,7 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { generateLandscape, updateSkyColors, animateWater, animateChickens } from './terrain.js';
+import { generateLandscape, updateSkyColors, animateWater, animateChickens, blockifyTerrain } from './terrain.js';
 
 // --- Renderer ---
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -851,6 +851,47 @@ function getTimeLabel(t) {
 let currentLandscape = null;
 let currentSeed = null;
 let chickensEnabled = true;
+let isBlockified = false;
+let voxelTerrainGroup = null;
+const blockifyBtn = document.getElementById('blockify-btn');
+
+function toggleBlockify() {
+  if (!currentLandscape) return;
+
+  if (isBlockified) {
+    // Revert: remove voxel terrain, restore smooth terrain
+    if (voxelTerrainGroup) {
+      currentLandscape.remove(voxelTerrainGroup);
+      voxelTerrainGroup.traverse(obj => {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) obj.material.dispose();
+      });
+      voxelTerrainGroup = null;
+    }
+    const terrain = currentLandscape.children[0];
+    if (terrain && terrain.material) {
+      terrain.material.opacity = 1;
+      terrain.material.transparent = false;
+    }
+    isBlockified = false;
+    blockifyBtn.textContent = 'Blockify';
+    blockifyBtn.classList.remove('active');
+  } else {
+    // Convert: hide smooth terrain, show voxel blocks
+    const terrain = currentLandscape.children[0];
+    if (terrain && terrain.material) {
+      terrain.material.transparent = true;
+      terrain.material.opacity = 0;
+    }
+    voxelTerrainGroup = blockifyTerrain(currentLandscape);
+    currentLandscape.add(voxelTerrainGroup);
+    isBlockified = true;
+    blockifyBtn.textContent = 'Smooth Terrain';
+    blockifyBtn.classList.add('active');
+  }
+}
+
+blockifyBtn.addEventListener('click', toggleBlockify);
 
 function disposeLandscape() {
   if (!currentLandscape) return;
@@ -880,6 +921,12 @@ function generate(seed) {
 
   disposeLandscape();
   clearAllBlocks();
+
+  isBlockified = false;
+  voxelTerrainGroup = null;
+  blockifyBtn.textContent = 'Blockify';
+  blockifyBtn.classList.remove('active');
+
   currentLandscape = generateLandscape(seed);
   scene.add(currentLandscape);
 
