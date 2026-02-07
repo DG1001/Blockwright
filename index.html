@@ -306,6 +306,20 @@
   }
   #ai-error.visible { display: block; }
 
+  .btn-small {
+    flex: 1;
+    padding: 5px 8px;
+    background: #444;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-small:hover { background: #555; }
+  .btn-small:active { background: #333; }
+
   /* API Key Section */
   .api-key-section {
     margin-top: 4px;
@@ -426,6 +440,11 @@
     </div>
     <div id="ai-loading">Generating structure...</div>
     <div id="ai-error"></div>
+    <div class="ai-build-row" style="margin-top:6px;">
+      <button id="export-btn" class="btn-small">Export Blocks</button>
+      <button id="import-btn" class="btn-small">Import</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none;">
   </div>
 
   <hr class="separator">

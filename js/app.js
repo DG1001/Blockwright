@@ -613,6 +613,111 @@ aiPromptInput.addEventListener('keydown', (e) => {
   }
 });
 
+// =============================================
+// EXPORT / IMPORT STRUCTURES
+// =============================================
+
+const importFile = document.getElementById('import-file');
+
+function exportBlocks() {
+  if (placedBlocks.size === 0) {
+    alert('No blocks placed to export.');
+    return;
+  }
+
+  const raw = [];
+  for (const mesh of placedBlocks.values()) {
+    // Determine block type by matching material reference
+    let type = 2; // default stone
+    for (let i = 0; i < blockMaterials.length; i++) {
+      if (mesh.material === blockMaterials[i]) {
+        type = i;
+        break;
+      }
+    }
+    // Mesh positions are at half-integers (0.5, 1.5, ...); convert to integer grid
+    const x = Math.round(mesh.position.x - 0.5);
+    const y = Math.round(mesh.position.y - 0.5);
+    const z = Math.round(mesh.position.z - 0.5);
+    raw.push({ x, y, z, type });
+  }
+
+  // Normalize: min y = 0, center x/z on centroid
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxZ = -Infinity;
+  for (const b of raw) {
+    if (b.x < minX) minX = b.x;
+    if (b.y < minY) minY = b.y;
+    if (b.z < minZ) minZ = b.z;
+    if (b.x > maxX) maxX = b.x;
+    if (b.z > maxZ) maxZ = b.z;
+  }
+  const centerX = Math.round((minX + maxX) / 2);
+  const centerZ = Math.round((minZ + maxZ) / 2);
+
+  const normalized = raw.map(b => ({
+    x: b.x - centerX,
+    y: b.y - minY,
+    z: b.z - centerZ,
+    type: b.type,
+  }));
+
+  const json = JSON.stringify(normalized);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'structure.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function handleImport() {
+  const file = importFile.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data) || data.length === 0) {
+        alert('Invalid structure file: expected a non-empty JSON array.');
+        return;
+      }
+
+      const validated = [];
+      for (const b of data) {
+        if (typeof b.x !== 'number' || typeof b.y !== 'number' || typeof b.z !== 'number') continue;
+        const type = typeof b.type === 'number' ? Math.max(0, Math.min(5, Math.round(b.type))) : 2;
+        validated.push({
+          x: Math.round(b.x),
+          y: Math.round(b.y),
+          z: Math.round(b.z),
+          type,
+        });
+        if (validated.length >= 500) break;
+      }
+
+      if (validated.length === 0) {
+        alert('No valid blocks found in file.');
+        return;
+      }
+
+      activateBlueprint(validated);
+    } catch {
+      alert('Failed to parse JSON file.');
+    }
+  };
+  reader.readAsText(file);
+
+  // Reset so the same file can be re-imported
+  importFile.value = '';
+}
+
+document.getElementById('export-btn').addEventListener('click', exportBlocks);
+document.getElementById('import-btn').addEventListener('click', () => importFile.click());
+importFile.addEventListener('change', handleImport);
+
 // --- Mouse handlers for block place/remove ---
 document.addEventListener('mousedown', (e) => {
   if (!fpMode || !fpControls.isLocked) return;
