@@ -13,6 +13,9 @@ The subscription usage was on the other hand much better: Codex just used a few 
 
 HINT: if you try the AI building feature, be prepared to pay for it. The 'church' in the screenshot for example cost 10 cents in API usage.
 
+UPDATE: Claude added some more feature for me, e.g. showing the terrain in blocky mode and adding chickens...
+And after adding the import/export feature, I thought this would be an easy way to compare LLMs, see the 'Block Bench' below.
+
 
 ## Features
 
