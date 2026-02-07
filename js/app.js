@@ -4,7 +4,7 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { generateLandscape, updateSkyColors, animateWater } from './terrain.js';
+import { generateLandscape, updateSkyColors, animateWater, animateChickens } from './terrain.js';
 
 // --- Renderer ---
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -850,6 +850,7 @@ function getTimeLabel(t) {
 // --- Landscape state ---
 let currentLandscape = null;
 let currentSeed = null;
+let chickensEnabled = true;
 
 function disposeLandscape() {
   if (!currentLandscape) return;
@@ -884,6 +885,10 @@ function generate(seed) {
 
   updateTimeOfDay(timeOfDay);
 
+  // Apply chickens toggle visibility
+  const chickens = currentLandscape.getObjectByName('chickens');
+  if (chickens) chickens.visible = chickensEnabled;
+
   document.getElementById('seed-value').textContent = seed;
   document.getElementById('seed-input').value = '';
 }
@@ -908,6 +913,15 @@ timeSlider.addEventListener('input', (e) => {
   timeOfDay = t;
   updateTimeOfDay(t);
   timeLabel.textContent = getTimeLabel(t);
+});
+
+// --- UI: Chickens toggle ---
+document.getElementById('chickens-toggle').addEventListener('change', (e) => {
+  chickensEnabled = e.target.checked;
+  if (currentLandscape) {
+    const chickens = currentLandscape.getObjectByName('chickens');
+    if (chickens) chickens.visible = chickensEnabled;
+  }
 });
 
 // --- UI: Seed input ---
@@ -1003,6 +1017,11 @@ function animate() {
   if (currentLandscape) {
     const water = currentLandscape.getObjectByName('water');
     if (water) animateWater(water, elapsed);
+
+    const chickens = currentLandscape.getObjectByName('chickens');
+    if (chickens && chickens.visible) {
+      animateChickens(chickens, elapsed, delta, getTerrainHeight);
+    }
 
     const clouds = currentLandscape.getObjectByName('clouds');
     if (clouds) {

@@ -157,6 +157,21 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #ccc;
+    cursor: pointer;
+  }
+  .checkbox-label input[type="checkbox"] {
+    accent-color: #2a7fff;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+
   .separator {
     border: none;
     border-top: 1px solid rgba(255,255,255,0.1);
@@ -412,6 +427,15 @@
     <label>Time of Day</label>
     <input id="time-slider" type="range" min="0" max="100" value="35">
     <div id="time-label">Morning</div>
+  </div>
+
+  <hr class="separator">
+
+  <div class="control-group">
+    <label class="checkbox-label">
+      <input type="checkbox" id="chickens-toggle" checked>
+      Chickens
+    </label>
   </div>
 
   <hr class="separator">
