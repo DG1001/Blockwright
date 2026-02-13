@@ -26,7 +26,7 @@ And after adding the import/export feature, I thought this would be an easy way 
 - **Block building** — Place and remove Minecraft-style blocks in first person (6 block types)
 - **Blockify terrain** — Toggle converts the smooth terrain into Minecraft-style voxel blocks using InstancedMesh (sand near water, grass in midlands, stone on peaks). Chickens are hidden automatically in blocky mode
 - **AI Structure Builder** — Describe a structure (e.g. "small house", "bridge") and Claude generates a block layout via the Anthropic API. Preview it as a ghost blueprint, rotate with Q/E, then click to place
-- **Export / Import** — Save placed blocks as a JSON file and re-import them later as blueprints (ghost preview, rotation, click to place). Uses the same format as the AI builder, so exported files can be shared, hand-edited, or re-imported into any session
+- **Export / Import** — Save placed blocks as a JSON file and re-import them later as blueprints (ghost preview, rotation, click to place). Import from a file or paste JSON directly into a text field — handy for copying output from LLM web interfaces without saving to a file first. Uses the same format as the AI builder, so exported files can be shared, hand-edited, or re-imported into any session
 - **Chickens** — Cartoon chickens roam the grass with walking, pecking, and idle animations (toggleable via sidebar checkbox)
 - **Seed system** — Enter a numeric or text seed to revisit the same landscape
 - **Screenshot** — Download the current view as PNG
@@ -97,7 +97,8 @@ block_bench/      — LLM tower benchmark results (see below)
 ## Export / Import
 
 - **Export Blocks** — Downloads all placed blocks as `structure.json`. Coordinates are normalized (y starts at 0, x/z centered) so structures are portable.
-- **Import** — Load any `.json` file in the same format. The structure appears as a blueprint ghost that you can rotate and place, identical to AI-generated builds.
+- **Import File** — Load any `.json` file in the same format. The structure appears as a blueprint ghost that you can rotate and place, identical to AI-generated builds.
+- **Import from Text** — Paste JSON directly into the text field and click "Import from Text". Perfect for copying block data from LLM web chats without saving to a file first.
 
 The JSON format is a flat array of block objects:
 ```json

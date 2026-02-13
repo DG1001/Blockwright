@@ -672,51 +672,65 @@ function exportBlocks() {
   URL.revokeObjectURL(url);
 }
 
+function importFromJSON(text) {
+  try {
+    const data = JSON.parse(text);
+    if (!Array.isArray(data) || data.length === 0) {
+      alert('Invalid structure: expected a non-empty JSON array.');
+      return;
+    }
+
+    const validated = [];
+    for (const b of data) {
+      if (typeof b.x !== 'number' || typeof b.y !== 'number' || typeof b.z !== 'number') continue;
+      const type = typeof b.type === 'number' ? Math.max(0, Math.min(5, Math.round(b.type))) : 2;
+      validated.push({
+        x: Math.round(b.x),
+        y: Math.round(b.y),
+        z: Math.round(b.z),
+        type,
+      });
+      if (validated.length >= 500) break;
+    }
+
+    if (validated.length === 0) {
+      alert('No valid blocks found.');
+      return;
+    }
+
+    activateBlueprint(validated);
+  } catch {
+    alert('Failed to parse JSON.');
+  }
+}
+
 function handleImport() {
   const file = importFile.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result);
-      if (!Array.isArray(data) || data.length === 0) {
-        alert('Invalid structure file: expected a non-empty JSON array.');
-        return;
-      }
-
-      const validated = [];
-      for (const b of data) {
-        if (typeof b.x !== 'number' || typeof b.y !== 'number' || typeof b.z !== 'number') continue;
-        const type = typeof b.type === 'number' ? Math.max(0, Math.min(5, Math.round(b.type))) : 2;
-        validated.push({
-          x: Math.round(b.x),
-          y: Math.round(b.y),
-          z: Math.round(b.z),
-          type,
-        });
-        if (validated.length >= 500) break;
-      }
-
-      if (validated.length === 0) {
-        alert('No valid blocks found in file.');
-        return;
-      }
-
-      activateBlueprint(validated);
-    } catch {
-      alert('Failed to parse JSON file.');
-    }
-  };
+  reader.onload = () => importFromJSON(reader.result);
   reader.readAsText(file);
 
   // Reset so the same file can be re-imported
   importFile.value = '';
 }
 
+function handleTextImport() {
+  const textArea = document.getElementById('import-text');
+  const text = textArea.value.trim();
+  if (!text) {
+    alert('Please paste JSON into the text field first.');
+    return;
+  }
+  importFromJSON(text);
+  textArea.value = '';
+}
+
 document.getElementById('export-btn').addEventListener('click', exportBlocks);
 document.getElementById('import-btn').addEventListener('click', () => importFile.click());
 importFile.addEventListener('change', handleImport);
+document.getElementById('import-text-btn').addEventListener('click', handleTextImport);
 
 // --- Mouse handlers for block place/remove ---
 document.addEventListener('mousedown', (e) => {
