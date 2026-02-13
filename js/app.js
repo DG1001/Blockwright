@@ -905,12 +905,12 @@ const ambientLight = new THREE.AmbientLight(0x404060, 0.3);
 scene.add(ambientLight);
 
 // --- Time of day ---
-let timeOfDay = 0.35;
+let timeOfDay = 0.5;
 
 function updateTimeOfDay(t) {
   timeOfDay = t;
 
-  const sunAngle = (t - 0.25) * Math.PI;
+  const sunAngle = (t - 0.25) * Math.PI * 2;
   const sunY = Math.sin(sunAngle) * 80;
   const sunXZ = Math.cos(sunAngle) * 80;
   sunLight.position.set(sunXZ, Math.max(sunY, -10), 40);
@@ -969,7 +969,7 @@ function getTimeLabel(t) {
 // --- Landscape state ---
 let currentLandscape = null;
 let currentSeed = null;
-let chickensEnabled = true;
+let chickensEnabled = false;
 let isBlockified = false;
 let voxelTerrainGroup = null;
 const blockifyBtn = document.getElementById('blockify-btn');
