@@ -65,6 +65,40 @@ const EYE_HEIGHT = 2.5;
 const fpVelocity = new THREE.Vector3();
 const fpDirection = new THREE.Vector3();
 
+// --- Touch device support ---
+const isTouchDevice = 'ontouchstart' in window;
+let touchActive = false; // true when FPV is active on a touch device
+const touchJoystick = document.getElementById('touch-joystick');
+const joystickBase = document.getElementById('joystick-base');
+const joystickKnob = document.getElementById('joystick-knob');
+const touchFpvHint = document.getElementById('touch-fpv-hint');
+
+// Joystick state
+let joystickTouchId = null;
+let joystickCenterX = 0;
+let joystickCenterY = 0;
+const joystickMaxRadius = 50; // px
+const touchMoveDir = new THREE.Vector2(0, 0); // normalized -1..1
+
+// Camera look state (right side)
+let lookTouchId = null;
+let lookLastX = 0;
+let lookLastY = 0;
+const TOUCH_LOOK_SENSITIVITY = 0.004;
+
+// Touch camera euler angles (managed manually on touch)
+let touchYaw = 0;
+let touchPitch = 0;
+
+// Tap / long-press detection for right side
+let tapStartTime = 0;
+let tapStartX = 0;
+let tapStartY = 0;
+const TAP_MAX_DURATION = 200; // ms
+const TAP_MAX_MOVE = 10;     // px
+const LONGPRESS_DURATION = 400; // ms
+let longPressTimer = null;
+
 // --- Raycaster ---
 const downRay = new THREE.Raycaster();
 downRay.far = 200;
@@ -207,7 +241,7 @@ function getPlacementPos(hit) {
 
 // Update ghost preview each frame
 function updateGhostBlock() {
-  if (!fpMode || !fpControls.isLocked || blueprintActive) {
+  if (!fpMode || !(fpControls.isLocked || touchActive) || blueprintActive) {
     ghostMesh.visible = false;
     return;
   }
@@ -538,16 +572,17 @@ function activateBlueprint(blocks) {
   // Enter FP mode if not already
   if (!fpMode) {
     enterFPMode();
-  } else if (!fpControls.isLocked) {
+  } else if (!fpControls.isLocked && !touchActive) {
     fpControls.lock();
   }
 
   // Hide single-block ghost
   ghostMesh.visible = false;
 
-  // Show blueprint hint, hide normal hint
+  // Show blueprint hint, hide normal hints
   blueprintHint.style.display = 'block';
   fpvHint.style.display = 'none';
+  touchFpvHint.style.display = 'none';
 
   // Create ghost group
   const rotated = getRotatedBlocks();
@@ -571,7 +606,13 @@ function cancelBlueprint() {
 
   // Restore normal hints
   blueprintHint.style.display = 'none';
-  if (fpMode) fpvHint.style.display = 'block';
+  if (fpMode) {
+    if (touchActive) {
+      touchFpvHint.style.display = 'block';
+    } else {
+      fpvHint.style.display = 'block';
+    }
+  }
 }
 
 // --- Place all blueprint blocks ---
@@ -734,7 +775,7 @@ document.getElementById('import-text-btn').addEventListener('click', handleTextI
 
 // --- Mouse handlers for block place/remove ---
 document.addEventListener('mousedown', (e) => {
-  if (!fpMode || !fpControls.isLocked) return;
+  if (!fpMode || !(fpControls.isLocked || touchActive)) return;
 
   // Blueprint mode intercepts clicks
   if (blueprintActive) {
@@ -785,7 +826,15 @@ document.addEventListener('wheel', (e) => {
 function showFPUI(show) {
   crosshair.style.display = show ? 'block' : 'none';
   hotbar.style.display = show ? 'flex' : 'none';
-  fpvHint.style.display = show ? 'block' : 'none';
+  if (isTouchDevice) {
+    fpvHint.style.display = 'none';
+    touchFpvHint.style.display = show ? 'block' : 'none';
+    touchJoystick.style.display = show ? 'block' : 'none';
+  } else {
+    fpvHint.style.display = show ? 'block' : 'none';
+    touchFpvHint.style.display = 'none';
+    touchJoystick.style.display = 'none';
+  }
 }
 
 function enterFPMode() {
@@ -801,11 +850,20 @@ function enterFPMode() {
   const groundY = getTerrainHeight(startX, startZ);
   camera.position.set(startX, Math.max(groundY, 2.5) + EYE_HEIGHT, startZ);
 
-  fpControls.lock();
+  if (isTouchDevice) {
+    touchActive = true;
+    // Initialize touch yaw/pitch from current camera orientation
+    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+    touchYaw = euler.y;
+    touchPitch = euler.x;
+  } else {
+    fpControls.lock();
+  }
 }
 
 function exitFPMode() {
   fpMode = false;
+  touchActive = false;
   fpvBtn.classList.remove('active');
   fpvBtn.textContent = 'First Person';
   showFPUI(false);
@@ -813,6 +871,12 @@ function exitFPMode() {
   cancelBlueprint();
 
   fpControls.unlock();
+
+  // Reset joystick/touch state
+  joystickTouchId = null;
+  lookTouchId = null;
+  touchMoveDir.set(0, 0);
+  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
 
   camera.position.set(60, 40, 60);
   orbitControls.target.set(0, 5, 0);
@@ -825,13 +889,13 @@ fpvBtn.addEventListener('click', () => {
 });
 
 renderer.domElement.addEventListener('click', () => {
-  if (fpMode && !fpControls.isLocked) {
+  if (fpMode && !fpControls.isLocked && !isTouchDevice) {
     fpControls.lock();
   }
 });
 
 fpControls.addEventListener('unlock', () => {
-  if (fpMode && !blueprintActive) {
+  if (fpMode && !blueprintActive && !isTouchDevice) {
     fpvHint.style.display = 'block';
   }
 });
@@ -1142,7 +1206,8 @@ function animate() {
   prevTime = elapsed;
 
   // --- First-person movement ---
-  if (fpMode && fpControls.isLocked) {
+  const fpActive = fpMode && (fpControls.isLocked || touchActive);
+  if (fpActive) {
     const speed = moveState.sprint ? SPRINT_SPEED : WALK_SPEED;
 
     fpDirection.set(0, 0, 0);
@@ -1150,6 +1215,12 @@ function animate() {
     if (moveState.backward) fpDirection.z += 1;
     if (moveState.left) fpDirection.x -= 1;
     if (moveState.right) fpDirection.x += 1;
+
+    // Apply touch joystick input
+    if (touchActive && (touchMoveDir.x !== 0 || touchMoveDir.y !== 0)) {
+      fpDirection.x += touchMoveDir.x;
+      fpDirection.z += touchMoveDir.y; // joystick up = forward = -z
+    }
 
     if (fpDirection.lengthSq() > 0) {
       fpDirection.normalize();
@@ -1208,6 +1279,210 @@ function animate() {
 }
 
 animate();
+
+// =============================================
+// TOUCH CONTROLS (mobile FPV)
+// =============================================
+
+if (isTouchDevice) {
+  const canvas = renderer.domElement;
+
+  function isLeftSide(x) {
+    return x < window.innerWidth / 2;
+  }
+
+  function isOverUI(touch) {
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!el) return false;
+    const ui = document.getElementById('ui');
+    const uiToggle = document.getElementById('ui-toggle');
+    const hbar = document.getElementById('hotbar');
+    return (ui && ui.contains(el)) || el === uiToggle ||
+           (hbar && hbar.contains(el)) || el === fpvBtn;
+  }
+
+  canvas.addEventListener('touchstart', (e) => {
+    if (!fpMode || !touchActive) return;
+    e.preventDefault();
+
+    for (const touch of e.changedTouches) {
+      if (isOverUI(touch)) continue;
+
+      if (isLeftSide(touch.clientX)) {
+        // Left side: joystick
+        if (joystickTouchId === null) {
+          joystickTouchId = touch.identifier;
+          // Position joystick at touch location
+          const baseRect = joystickBase.getBoundingClientRect();
+          joystickCenterX = touch.clientX;
+          joystickCenterY = touch.clientY;
+          touchJoystick.style.left = (touch.clientX - baseRect.width / 2) + 'px';
+          touchJoystick.style.bottom = 'auto';
+          touchJoystick.style.top = (touch.clientY - baseRect.height / 2) + 'px';
+        }
+      } else {
+        // Right side: camera look + tap detection
+        if (lookTouchId === null) {
+          lookTouchId = touch.identifier;
+          lookLastX = touch.clientX;
+          lookLastY = touch.clientY;
+
+          // Start tap/long-press tracking
+          tapStartTime = performance.now();
+          tapStartX = touch.clientX;
+          tapStartY = touch.clientY;
+
+          longPressTimer = setTimeout(() => {
+            // Long press: check movement threshold using tracked position
+            const movedX = Math.abs(lookLastX - tapStartX);
+            const movedY = Math.abs(lookLastY - tapStartY);
+            if (movedX < TAP_MAX_MOVE && movedY < TAP_MAX_MOVE) {
+              handleLongPress();
+            }
+            longPressTimer = null;
+          }, LONGPRESS_DURATION);
+        }
+      }
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (!fpMode || !touchActive) return;
+    e.preventDefault();
+
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === joystickTouchId) {
+        // Update joystick
+        let dx = touch.clientX - joystickCenterX;
+        let dy = touch.clientY - joystickCenterY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const clampedDist = Math.min(dist, joystickMaxRadius);
+
+        if (dist > 0) {
+          dx = (dx / dist) * clampedDist;
+          dy = (dy / dist) * clampedDist;
+        }
+
+        // Move knob visually (60 = half of 120px base)
+        joystickKnob.style.transform = 'none';
+        joystickKnob.style.left = (60 + dx - 25) + 'px'; // 25 = half of 50px knob
+        joystickKnob.style.top = (60 + dy - 25) + 'px';
+
+        // Normalize to -1..1
+        touchMoveDir.set(dx / joystickMaxRadius, dy / joystickMaxRadius);
+      }
+
+      if (touch.identifier === lookTouchId) {
+        const dx = touch.clientX - lookLastX;
+        const dy = touch.clientY - lookLastY;
+        lookLastX = touch.clientX;
+        lookLastY = touch.clientY;
+
+        // Rotate camera
+        touchYaw -= dx * TOUCH_LOOK_SENSITIVITY;
+        touchPitch -= dy * TOUCH_LOOK_SENSITIVITY;
+        touchPitch = THREE.MathUtils.clamp(touchPitch, -Math.PI * 85 / 180, Math.PI * 85 / 180);
+
+        const euler = new THREE.Euler(touchPitch, touchYaw, 0, 'YXZ');
+        camera.quaternion.setFromEuler(euler);
+
+        // Cancel long press if moved too far
+        const totalDx = Math.abs(touch.clientX - tapStartX);
+        const totalDy = Math.abs(touch.clientY - tapStartY);
+        if (totalDx > TAP_MAX_MOVE || totalDy > TAP_MAX_MOVE) {
+          if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        }
+      }
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', (e) => {
+    if (!fpMode || !touchActive) return;
+
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === joystickTouchId) {
+        joystickTouchId = null;
+        touchMoveDir.set(0, 0);
+        // Reset knob position
+        joystickKnob.style.left = '50%';
+        joystickKnob.style.top = '50%';
+        joystickKnob.style.transform = 'translate(-50%, -50%)';
+        // Reset joystick position to default
+        touchJoystick.style.left = '40px';
+        touchJoystick.style.bottom = '80px';
+        touchJoystick.style.top = 'auto';
+      }
+
+      if (touch.identifier === lookTouchId) {
+        lookTouchId = null;
+
+        // Check for tap
+        const elapsed = performance.now() - tapStartTime;
+        const dx = Math.abs(touch.clientX - tapStartX);
+        const dy = Math.abs(touch.clientY - tapStartY);
+
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+
+        if (elapsed < TAP_MAX_DURATION && dx < TAP_MAX_MOVE && dy < TAP_MAX_MOVE) {
+          handleTap();
+        }
+      }
+    }
+  });
+
+  canvas.addEventListener('touchcancel', (e) => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === joystickTouchId) {
+        joystickTouchId = null;
+        touchMoveDir.set(0, 0);
+        joystickKnob.style.left = '50%';
+        joystickKnob.style.top = '50%';
+        joystickKnob.style.transform = 'translate(-50%, -50%)';
+        touchJoystick.style.left = '40px';
+        touchJoystick.style.bottom = '80px';
+        touchJoystick.style.top = 'auto';
+      }
+      if (touch.identifier === lookTouchId) {
+        lookTouchId = null;
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      }
+    }
+  });
+
+  function handleTap() {
+    // Tap = place block or place blueprint
+    if (blueprintActive) {
+      placeBlueprint();
+      return;
+    }
+
+    const hit = getAimTarget();
+    if (!hit) return;
+
+    const pos = getPlacementPos(hit);
+    // Don't place block inside the player
+    const dx = pos.x - camera.position.x;
+    const dy = pos.y - camera.position.y;
+    const dz = pos.z - camera.position.z;
+    if (Math.abs(dx) < 0.8 && Math.abs(dz) < 0.8 && dy > -2 && dy < 0.5) return;
+    placeBlock(pos.x, pos.y, pos.z);
+  }
+
+  function handleLongPress() {
+    // Long press = remove block or cancel blueprint
+    if (blueprintActive) {
+      cancelBlueprint();
+      return;
+    }
+
+    const hit = getAimTarget();
+    if (!hit) return;
+
+    if (hit.object.userData.isBlock) {
+      removeBlock(hit.object);
+    }
+  }
+}
 
 // --- Auto-generate on load ---
 generate();

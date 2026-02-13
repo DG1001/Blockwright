@@ -409,6 +409,57 @@
     color: #fff;
   }
 
+  /* Touch joystick */
+  #touch-joystick {
+    position: fixed;
+    bottom: 80px;
+    left: 40px;
+    z-index: 25;
+    display: none;
+    pointer-events: none;
+  }
+  #joystick-base {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.2);
+    position: relative;
+  }
+  #joystick-knob {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.4);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: none;
+  }
+
+  /* Touch FPV hint */
+  #touch-fpv-hint {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 10px 20px;
+    color: #ccc;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    text-align: center;
+    pointer-events: none;
+    display: none;
+    line-height: 1.6;
+  }
+
   /* Mobile: collapsible sidebar */
   #ui-toggle {
     display: none;
@@ -542,6 +593,16 @@
 </div>
 
 <div id="crosshair"></div>
+
+<div id="touch-joystick">
+  <div id="joystick-base">
+    <div id="joystick-knob"></div>
+  </div>
+</div>
+
+<div id="touch-fpv-hint">
+  Left side: drag to move &nbsp; Right side: drag to look &nbsp; Tap to place &nbsp; Hold to remove
+</div>
 
 <div id="hotbar">
   <div class="hotbar-slot active" data-slot="0">
